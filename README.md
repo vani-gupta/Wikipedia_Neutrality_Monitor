@@ -17,24 +17,47 @@ This work addresses the following research questions:
 - Can **lexicon-based methods**, when adapted per language, provide reliable sentiment signals for encyclopedic text?
 - To what extent can **zero-shot large language models** detect bias patterns without task-specific training data?
 
-## Data Description
+## Data Acquisition and Preprocessing
+
+**File:** `data_collection.ipynb`
+
+This notebook implements a reproducible pipeline for constructing a **multilingual Wikipedia corpus** aligned at the entity level.
+
+### Data Description
 
 - **Languages:** English (EN), German (DE), Spanish (ES), Hindi (HI), Chinese (ZH)
 - **Scale:**
   - ~1,000 entities
   - ~5,000 Wikipedia articles
   - Diverse topical categories
-- **Data sources:** Wikipedia dumps and Wikipedia API
-- **Preprocessing steps:**
-  - Removal of references and markup
-  - Extraction of clean article text for analysis
+
+### Data Sources and Extraction
+
+- Entities are identified using **Wikidata QIDs**, ensuring cross-language consistency.
+- Wikipedia articles are extracted using **Wikidumps** and the **Wikipedia API**.
+- For each entity, corresponding articles are collected across multiple language editions.
 
 <img width="851" height="219" alt="image" src="https://github.com/user-attachments/assets/096af453-341a-426a-9557-fac759786487" />
 
+### Preprocessing
 
-## Notebook 1: Language-Specific Lexicon-Based Sentiment Labelling
+Extracted articles are cleaned to retain analyzable content by:
+- Removing references, citations, and wiki markup
+- Normalizing text across languages
 
-**File:** `language_specific_labelling.ipynb`
+### Output
+
+The final dataset contains:
+- Entity identifier (QID)
+- Language code and article title
+- Cleaned article text
+- Associated Wikipedia categories
+
+The processed data is used directly as input for downstream sentiment and bias analysis notebooks.
+
+## Language-Specific Lexicon-Based Sentiment Labelling
+
+**File:** `language_specific_lexicon_labelling.ipynb`
 
 ### Objective
 
@@ -71,7 +94,7 @@ Each article is mapped to:
 
 ---
 
-## Notebook 2: Zero-Shot Bias Detection Using BART
+## Zero-Shot Classification Using BART
 
 **File:** `bart_modelling.ipynb`
 
@@ -83,27 +106,33 @@ To detect **latent bias signals** in Wikipedia articles using **zero-shot natura
 
 The analysis operationalizes bias across the following categories:
 
-- **Social Bias** (e.g., gender, race, age)
+- **Social Bias** including gender bias, racial bias, age bias  
 - **Political Bias**
-- **Media Bias** (framing, omission, coverage)
+- **Media Bias** including framing bias, omission bias, coverage bias
 - **Cultural Bias**
+
+Why group biases? 
+- **Improves classification confidence**: Fewer, more distinct labels reduce overlap and confusion for the model.  
+- **Simplifies output**: Easier to interpret and act on three broad categories than eight specific ones.
+
+<img width="748" height="411" alt="Screenshot 2026-01-26 at 10 01 05 PM" src="https://github.com/user-attachments/assets/337a65a5-85c4-4a34-94b5-57e14a2e08d7" />
 
 ### Model Choice and Rationale
 
-- **BART-MNLI** is used for zero-shot classification due to:
-  - Strong semantic reasoning capabilities
-  - Flexibility in defining bias hypotheses
-  - Multilingual generalization potential
-- Comparative experiments were conducted using **XLM-R** for performance validation
+- The **BART-MNLI** , fine-tuned on the Multi-Genre Natural Language Inference (MNLI) dataset, is trained to understand relationships between premises and hypotheses, which enables the following trick for classification:
+- You provide your input text as the "premise".
+- Each candidate label becomes a hypothesis, like: "This text is about gender bias."
+The model evaluates how entailment, neutral, or contradiction the relationship is between the premise and each hypothesis.
+As a result, it has Strong semantic reasoning capabilities and Flexibility in defining bias hypotheses. 
+    
+Note: Comparative experiments were conducted using **XLM-R** for performance validation
 
 Zero-shot classification was selected to:
 - Avoid costly annotation processes
 - Enable rapid iteration across bias definitions
 - Support multilingual scalability
 
-<img width="748" height="411" alt="Screenshot 2026-01-26 at 10 01 05 PM" src="https://github.com/user-attachments/assets/337a65a5-85c4-4a34-94b5-57e14a2e08d7" />
-
-### Results
+### Findings
 
 - Bias-related signals were identified in approximately **13% of articles (639 / 5000)**.
 - The strongest and most consistent signals were observed for:
